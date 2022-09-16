@@ -7,17 +7,27 @@
   <link rel="icon" href="spliner.png" type="image/x-icon">
   <!-- Our Styles -->
   <link rel="stylesheet" href="css/main.css">
+  <!-- Masonry -->
+  <link rel="stylesheet" href="css/masonry.css">
   <insert-html link="https://swag31415.github.io/Portfolio/inserts/head.html"></insert-html>
 </head>
 
 <body>
   <insert-html link="https://swag31415.github.io/Portfolio/inserts/menu.html"></insert-html>
   <main class="container">
-    <!-- TODO Add body -->
+    <h1>Spliner</h1>
+    <canvas id="disp" style="width: 100%; aspect-ratio: 1 / 1;" resize></canvas>
+    <div id="dock" class="masonry ms3 mm4 ml5 mxl6"></div>
   </main>
   <insert-html link="https://swag31415.github.io/Portfolio/inserts/foot.html"></insert-html>
   <!-- HTML Inserts -->
   <script src="https://swag31415.github.io/Portfolio/js/html_inserts.js"></script>
+  <!-- Paper.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"
+    integrity="sha512-ovjLI1ZcZe6bw+ImQ21r+sv8q/Vwob2kq7tFidK6E1LWfi0T4uobbmpfEU1//a9h9o5Kkt+MnMWf6rWlg0EiMw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- Vanilla Picker -->
+  <script src="https://unpkg.com/vanilla-picker@2"></script>
   <!-- Our Scripts -->
   <script src="js/main.js"></script>
 </body>
