@@ -34,7 +34,7 @@ const dock = {
     }
     return picker
   },
-  spawn_slider: function (name, initial_value, on_change) {
+  spawn_slider: function (name, initial_value, on_change, init=true) {
     let [div, inp] = this.spawn_input(name, {
       type: "number",
       min: 1,
@@ -44,7 +44,7 @@ const dock = {
     })
     inp.addEventListener("change", e => on_change(e.target.value))
     // Handle initial value
-    on_change(initial_value)
+    if (init) on_change(initial_value)
     return div
   },
   spawn_button: function(name, classes, on_click) {
@@ -67,7 +67,7 @@ dock.spawn_picker("background color", "#000", c => background.fillColor = c.hex)
 
 const main_tool = new paper.Tool({
   onActivate: function () {
-    this.edit_button = dock.spawn_button("Edit Mode", "blue-grey darken-4", e => edit_tool.start())
+    this.edit_button = dock.spawn_button("Edit", "blue-grey darken-4", e => edit_tool.start())
   },
   onDeactivate: function () {
     this.edit_button.remove()
@@ -138,14 +138,40 @@ const edit_tool = new paper.Tool({
       else if (hit.type == "segment") return if_hit(hit.segment.point)
     } else if (if_no_hit) if_no_hit(point)
   },
+  // Checks if any path is selected without any of it's points being selected
+  // If so, it deselects those paths
   path_check: function () {
     paper.project.getItems({selected: true, class: paper.Path})
       .filter(path => path.segments.every(seg => !seg.point.selected))
       .forEach(path => path.selected = false)
   },
+  update_selected: function () {
+    this.selected_paths = paper.project.getItems({selected: true, class: paper.Path})
+    if (this.selected_paths.length == 0 && this.any_selected == true) {
+      this.any_selected = false;
+      this.stroke_picker.remove()
+      this.fill_picker.remove()
+      this.thicc_slider.remove()
+    } else if (this.selected_paths.length > 0 && this.any_selected == false) {
+      this.any_selected = true;
+      this.stroke_picker = dock.spawn_picker("stroke color", false,
+        c => this.selected_paths.forEach(path => path.strokeColor = c.hex))
+      this.fill_picker = dock.spawn_picker("fill color", false,
+        c => this.selected_paths.forEach(path => path.fillColor = c.hex))
+      this.thicc_slider = dock.spawn_slider("thickness", 1,
+        n => this.selected_paths.forEach(path => path.strokeWidth = n), false)
+    }
+  },
   start: function () {
     M.toast({ html: "<span>Switched to <strong>Edit</strong> mode</span>" })
+    this.done_button = dock.spawn_button("Done", "blue-grey darken-4", e => main_tool.activate())
+    this.any_selected = false
     this.activate()
+  },
+  onDeactivate: function () {
+    paper.project.activeLayer.selected = false
+    M.toast({ html: "<span>Leaving edit mode</span>" })
+    this.done_button.remove()
   },
   onMouseMove: function (e) {
     this.hit_test(e.point, obj => {
@@ -204,9 +230,11 @@ const edit_tool = new paper.Tool({
       this.select.remove()
       this.select = false
     }
+    this.update_selected()
   },
   select_all: function () {
     paper.project.getItems({class: paper.Path}).flatMap(path => path.segments).forEach(seg => seg.point.selected = true)
+    this.update_selected()
   },
   onKeyUp: function (e) {
     if (e.modifiers.control && e.key == 'c') {
@@ -217,6 +245,7 @@ const edit_tool = new paper.Tool({
         M.toast({html: "<span>Selection Copied</span>", class: "green"})
       } else M.toast({html: "<span>Nothing Selected</span>", class: "red"})
     } else if (e.modifiers.control && e.key == 'a') this.select_all()
+    else if (e.key == 'e' || e.key == 'escape') main_tool.activate()
   }
 })
 
