@@ -152,6 +152,7 @@ const edit_tool = new paper.Tool({
       this.stroke_picker.remove()
       this.fill_picker.remove()
       this.thicc_slider.remove()
+      this.delete_button.remove()
     } else if (this.selected_paths.length > 0 && this.any_selected == false) {
       this.any_selected = true;
       this.stroke_picker = dock.spawn_picker("stroke color", false,
@@ -160,6 +161,10 @@ const edit_tool = new paper.Tool({
         c => this.selected_paths.forEach(path => path.fillColor = c.hex))
       this.thicc_slider = dock.spawn_slider("thickness", 1,
         n => this.selected_paths.forEach(path => path.strokeWidth = n), false)
+      this.delete_button = dock.spawn_button("Delete", "black", () => {
+        this.selected_paths.forEach(path => path.remove())
+        this.update_selected()
+      })
     }
   },
   start: function () {
@@ -246,6 +251,7 @@ const edit_tool = new paper.Tool({
       } else M.toast({html: "<span>Nothing Selected</span>", class: "red"})
     } else if (e.modifiers.control && e.key == 'a') this.select_all()
     else if (e.key == 'e' || e.key == 'escape') main_tool.activate()
+    else if (e.key == 'delete' && this.any_selected) this.delete_button.click()
   }
 })
 
