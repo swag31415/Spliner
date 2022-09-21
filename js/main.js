@@ -1,5 +1,4 @@
 const disp = document.getElementById("disp")
-paper.install(window)
 paper.setup(disp)
 
 const dock = {
@@ -58,15 +57,15 @@ const dock = {
   }
 }
 
-const background = new Path.Rectangle({
+const background = new paper.Path.Rectangle({
   point: [0, 0],
-  size: view.bounds,
+  size: paper.view.bounds,
   fillColor: "#000"
 })
 background.sendToBack()
 dock.spawn_picker("background color", "#000", c => background.fillColor = c.hex)
 
-const main_tool = new Tool({
+const main_tool = new paper.Tool({
   onActivate: function () {
     this.edit_button = dock.spawn_button("Edit Mode", "blue-grey darken-4", e => edit_tool.start())
   },
@@ -83,7 +82,7 @@ const main_tool = new Tool({
   }
 })
 
-const draw_tool = new Tool({
+const draw_tool = new paper.Tool({
   default: {
     strokeColor: "#fff",
     fillColor: "#fff0",
@@ -94,7 +93,7 @@ const draw_tool = new Tool({
     if (this.close_toggle) this.close_toggle.innerText = this.path.closed ? "open" : "close"
   },
   start: function (point) {
-    this.path = new Path([point, point])
+    this.path = new paper.Path([point, point])
     this.stroke_picker = dock.spawn_picker("stroke color", this.default.strokeColor,
       c => draw_tool.default.strokeColor = draw_tool.path.strokeColor = c.hex)
     this.fill_picker = dock.spawn_picker("fill color", this.default.fillColor,
@@ -124,9 +123,9 @@ const draw_tool = new Tool({
   }
 })
 
-const edit_tool = new Tool({
+const edit_tool = new paper.Tool({
   hit_test: function (point, if_hit, if_no_hit) {
-    let hit = project.hitTest(point, {
+    let hit = paper.project.hitTest(point, {
       fill: true,
       stroke: true,
       segments: true,
@@ -140,7 +139,7 @@ const edit_tool = new Tool({
     } else if (if_no_hit) if_no_hit(point)
   },
   path_check: function () {
-    project.getItems({selected: true, class: Path})
+    paper.project.getItems({selected: true, class: paper.Path})
       .filter(path => path.segments.every(seg => !seg.point.selected))
       .forEach(path => path.selected = false)
   },
@@ -165,19 +164,19 @@ const edit_tool = new Tool({
   },
   onMouseDrag: function (e) {
     if (e.count == 0) {
-      this.selected = project
-        .getItems({selected: true, class: Path})
+      this.selected = paper.project
+        .getItems({selected: true, class: paper.Path})
         .flatMap(path => path.segments)
         .filter(seg => seg.point.selected)
       this.hit_test(e.point, obj => this.drag_mode = "move", () => {
-        if (project.activeLayer.selected) {
+        if (paper.project.activeLayer.selected) {
           this.pivot = this.selected
             .map(seg => seg.point)
             .reduce((p1, p2) => p1.add(p2))
             .divide(this.selected.length)
           this.drag_mode = "rotate"
         } else {
-          this.select = new Path({segments: [e.point], strokeColor: "#06e", fillColor: "#06e3", closed: true})
+          this.select = new paper.Path({segments: [e.point], strokeColor: "#06e", fillColor: "#06e3", closed: true})
           this.drag_mode = "select"
         }
       })
@@ -186,7 +185,7 @@ const edit_tool = new Tool({
       else if (this.drag_mode == "move") this.selected.forEach(seg => seg.point = seg.point.add(e.delta))
       else if (this.drag_mode == "rotate") {
         let angle = e.point.subtract(this.pivot).angle - e.lastPoint.subtract(this.pivot).angle
-        let trans = new Matrix().rotate(angle, this.pivot)
+        let trans = new paper.Matrix().rotate(angle, this.pivot)
         this.selected.forEach(seg => seg.transform(trans))
       }
     }
@@ -194,10 +193,10 @@ const edit_tool = new Tool({
   onMouseUp: function (e) {
     if (e.point.equals(e.downPoint)) {
       if (this.hover) this.hover = false
-      else this.hit_test(e.point, obj => obj.selected = false, () => project.activeLayer.selected = false)
+      else this.hit_test(e.point, obj => obj.selected = false, () => paper.project.activeLayer.selected = false)
       this.path_check()
     } else if (this.select) {
-      project.getItems({class: Path})
+      paper.project.getItems({class: paper.Path})
         .filter(path => path != this.select && path != background)
         .flatMap(path => path.segments)
         .filter(seg => this.select.contains(seg.point))
@@ -207,13 +206,13 @@ const edit_tool = new Tool({
     }
   },
   select_all: function () {
-    project.getItems({class: Path}).flatMap(path => path.segments).forEach(seg => seg.point.selected = true)
+    paper.project.getItems({class: paper.Path}).flatMap(path => path.segments).forEach(seg => seg.point.selected = true)
   },
   onKeyUp: function (e) {
     if (e.modifiers.control && e.key == 'c') {
-      if (project.activeLayer.selected) {
-        let selected_paths = project.getItems({selected: true, class: Path})
-        let svg_string = new Group(selected_paths, {insert: false}).exportSVG({asString: true, precision: 5})
+      if (paper.project.activeLayer.selected) {
+        let selected_paths = paper.project.getItems({selected: true, class: paper.Path})
+        let svg_string = new paper.Group(selected_paths, {insert: false}).exportSVG({asString: true, precision: 5})
         navigator.clipboard.writeText(svg_string)
         M.toast({html: "<span>Selection Copied</span>", class: "green"})
       } else M.toast({html: "<span>Nothing Selected</span>", class: "red"})
