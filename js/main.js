@@ -78,6 +78,9 @@ const main_tool = new paper.Tool({
     else if (e.modifiers.control && e.key == 'a') {
       edit_tool.start()
       edit_tool.select_all()
+    } else if (e.modifiers.control && e.key == 'v') {
+      edit_tool.start()
+      edit_tool.paste()
     }
   }
 })
@@ -238,7 +241,20 @@ const edit_tool = new paper.Tool({
     this.update_selected()
   },
   select_all: function () {
-    paper.project.getItems({class: paper.Path}).flatMap(path => path.segments).forEach(seg => seg.point.selected = true)
+    paper.project.getItems({class: paper.Path}).forEach(path => path.segments.forEach(seg => seg.point.selected = true))
+    this.update_selected()
+  },
+  paste: async function () {
+    paper.project.activeLayer.selected = false
+    let data = await navigator.clipboard.readText()
+    paper.project.importSVG(data, {
+      expandShapes: true,
+      onLoad: elem => {
+        elem.selected = true
+        paper.project.getItems({selected: true, class: paper.Path}).forEach(path => path.segments.forEach(seg => seg.point.selected = true))
+      },
+      onError: () => M.toast({ html: "<span>Didn't recognize clipboard contents</span>" })
+    })
     this.update_selected()
   },
   onKeyUp: function (e) {
@@ -250,6 +266,7 @@ const edit_tool = new paper.Tool({
         M.toast({html: "<span>Selection Copied</span>", class: "green"})
       } else M.toast({html: "<span>Nothing Selected</span>", class: "red"})
     } else if (e.modifiers.control && e.key == 'a') this.select_all()
+    else if (e.modifiers.control && e.key == 'v') this.paste()
     else if (e.key == 'e' || e.key == 'escape') main_tool.activate()
     else if (e.key == 'delete' && this.any_selected) this.delete_button.click()
   }
