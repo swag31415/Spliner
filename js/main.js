@@ -2,11 +2,18 @@ const disp = document.getElementById("disp")
 paper.setup(disp)
 
 const archive = {
+  curr: false,
   undo_states: [],
   redo_states: [],
   save: function () {
-    this.undo_states.push(paper.project.exportJSON())
-    this.redo_states = []
+    let state = paper.project.exportJSON()
+    if (!this.curr) this.curr = state
+    else if (this.curr == state) return;
+    else {
+      this.undo_states.push(this.curr)
+      this.curr = state
+      this.redo_states = []
+    }
   },
   undo: function () {
     if (this.undo_states.length == 0) {
@@ -14,8 +21,8 @@ const archive = {
       return;
     }
     state = this.undo_states.pop()
+    this.redo_states.push(this.curr)
     this.load(state)
-    this.redo_states.push(state)
   },
   redo: function () {
     if (this.redo_states.length == 0) {
@@ -23,12 +30,13 @@ const archive = {
       return;
     }
     state = this.redo_states.pop()
+    this.undo_states.push(this.curr)
     this.load(state)
-    this.undo_states.push(state)
   },
   load: function (state) {
     paper.project.clear()
     paper.project.importJSON(state)
+    this.curr = state
     paper.project.activeLayer.selected = false
   }
 }
@@ -98,6 +106,8 @@ const background = new paper.Path.Rectangle({
 background.sendToBack()
 dock.spawn_picker("background color", "#000", c => background.fillColor = c.hex)
 
+archive.save()
+
 const main_tool = new paper.Tool({
   onActivate: function () {
     this.edit_button = dock.spawn_button("Edit", "blue-grey darken-4", e => edit_tool.start())
@@ -156,7 +166,10 @@ const draw_tool = new paper.Tool({
     this.path.smooth({ type: "continuous" })
   },
   onKeyUp: function (e) {
-    if (e.key == "escape") main_tool.activate()
+    if (e.key == "escape") {
+      main_tool.activate()
+      archive.save()
+    }
     else if (e.key == "space") this.toggle_closed()
     else if (e.modifiers.control && e.key == 'z') {
       this.path.lastSegment.remove()
@@ -206,6 +219,7 @@ const edit_tool = new paper.Tool({
       this.delete_button = dock.spawn_button("Delete", "black", () => {
         this.selected_paths.forEach(path => path.remove())
         this.update_selected()
+        archive.save()
       })
     }
   },
@@ -277,6 +291,8 @@ const edit_tool = new paper.Tool({
         .forEach(seg => seg.point.selected = true)
       this.select.remove()
       this.select = false
+    } else {
+      archive.save()
     }
     this.update_selected()
   },
@@ -290,6 +306,7 @@ const edit_tool = new paper.Tool({
     paper.project.importSVG(data, {
       expandShapes: true,
       onLoad: elem => {
+        archive.save()
         elem.selected = true
         paper.project.getItems({selected: true, class: paper.Path}).forEach(path => path.segments.forEach(seg => seg.point.selected = true))
       },
