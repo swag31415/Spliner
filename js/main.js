@@ -1,6 +1,38 @@
 const disp = document.getElementById("disp")
 paper.setup(disp)
 
+const archive = {
+  undo_states: [],
+  redo_states: [],
+  save: function () {
+    this.undo_states.push(paper.project.exportJSON())
+    this.redo_states = []
+  },
+  undo: function () {
+    if (this.undo_states.length == 0) {
+      M.toast({ html: "<span>Nothing to undo</span>" })
+      return;
+    }
+    state = this.undo_states.pop()
+    this.load(state)
+    this.redo_states.push(state)
+  },
+  redo: function () {
+    if (this.redo_states.length == 0) {
+      M.toast({ html: "<span>Nothing to redo</span>" })
+      return;
+    }
+    state = this.redo_states.pop()
+    this.load(state)
+    this.undo_states.push(state)
+  },
+  load: function (state) {
+    paper.project.clear()
+    paper.project.importJSON(state)
+    paper.project.activeLayer.selected = false
+  }
+}
+
 const dock = {
   dock: document.getElementById("dock"),
   spawn_input: function (name, attrs) {
@@ -60,7 +92,8 @@ const dock = {
 const background = new paper.Path.Rectangle({
   point: [0, 0],
   size: paper.view.bounds,
-  fillColor: "#000"
+  fillColor: "#000",
+  name: 'background'
 })
 background.sendToBack()
 dock.spawn_picker("background color", "#000", c => background.fillColor = c.hex)
@@ -82,6 +115,8 @@ const main_tool = new paper.Tool({
       edit_tool.start()
       edit_tool.paste()
     }
+    else if (e.modifiers.control && e.key == 'z') archive.undo()
+    else if (e.modifiers.control && e.key == 'y') archive.redo()
   }
 })
 
@@ -123,6 +158,10 @@ const draw_tool = new paper.Tool({
   onKeyUp: function (e) {
     if (e.key == "escape") main_tool.activate()
     else if (e.key == "space") this.toggle_closed()
+    else if (e.modifiers.control && e.key == 'z') {
+      this.path.lastSegment.remove()
+      if (this.path.segments.length < 2) main_tool.activate()
+    }
   }
 })
 
@@ -133,9 +172,9 @@ const edit_tool = new paper.Tool({
       stroke: true,
       segments: true,
       tolerance: 5,
-      match: h => h.item != background
+      match: h => h.item.name != 'background'
     })
-    if (hit && hit.item != background) {
+    if (hit && hit.item.name != 'background') {
       // The types are stroke, fill, and segment
       if (hit.type == "stroke" || hit.type == "fill") return if_hit(hit.item)
       else if (hit.type == "segment") return if_hit(hit.segment.point)
@@ -178,6 +217,7 @@ const edit_tool = new paper.Tool({
   },
   onDeactivate: function () {
     paper.project.activeLayer.selected = false
+    this.update_selected()
     M.toast({ html: "<span>Leaving edit mode</span>" })
     this.done_button.remove()
   },
@@ -231,7 +271,7 @@ const edit_tool = new paper.Tool({
       this.path_check()
     } else if (this.select) {
       paper.project.getItems({class: paper.Path})
-        .filter(path => path != this.select && path != background)
+        .filter(path => path != this.select && path.name != 'background')
         .flatMap(path => path.segments)
         .filter(seg => this.select.contains(seg.point))
         .forEach(seg => seg.point.selected = true)
@@ -269,6 +309,8 @@ const edit_tool = new paper.Tool({
     else if (e.modifiers.control && e.key == 'v') this.paste()
     else if (e.key == 'e' || e.key == 'escape') main_tool.activate()
     else if (e.key == 'delete' && this.any_selected) this.delete_button.click()
+    else if (e.modifiers.control && e.key == 'z') archive.undo()
+    else if (e.modifiers.control && e.key == 'y') archive.redo()
   }
 })
 
