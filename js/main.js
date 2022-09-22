@@ -97,14 +97,13 @@ const dock = {
   }
 }
 
-const background = new paper.Path.Rectangle({
+new paper.Path.Rectangle({
   point: [0, 0],
   size: paper.view.bounds,
   fillColor: "#000",
   name: 'background'
-})
-background.sendToBack()
-dock.spawn_picker("background color", "#000", c => background.fillColor = c.hex)
+}).sendToBack()
+dock.spawn_picker("background color", "#000", c => paper.project.getItem({name: 'background'}).fillColor = c.hex)
 
 archive.save()
 
